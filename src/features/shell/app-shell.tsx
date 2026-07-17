@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
-import { LayoutDashboard, MapPin, Package, Store, Users, LogOut } from "lucide-react";
+import { LayoutDashboard, MapPin, Package, Store, Users, LogOut, Flag, FileText } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 import { SyncBadge } from "@/features/offline/sync-badge";
 
 type NavItem = {
-  to: "/app" | "/app/territories" | "/app/products" | "/app/stores" | "/app/users";
+  to: "/app" | "/app/territories" | "/app/products" | "/app/stores" | "/app/users" | "/app/campaigns" | "/app/forms";
   label: string;
   icon: typeof MapPin;
   exact?: boolean;
@@ -16,6 +16,8 @@ type NavItem = {
 
 const NAV: NavItem[] = [
   { to: "/app", label: "Dashboard", icon: LayoutDashboard, exact: true },
+  { to: "/app/campaigns", label: "Campaigns", icon: Flag },
+  { to: "/app/forms", label: "Forms", icon: FileText },
   { to: "/app/territories", label: "Territories", icon: MapPin },
   { to: "/app/products", label: "Products", icon: Package },
   { to: "/app/stores", label: "Stores", icon: Store },
