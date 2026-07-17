@@ -166,6 +166,7 @@ function FormDialog({
     status: form?.status ?? "draft",
     schema: form?.schema ?? [],
   });
+  const [previewAnswers, setPreviewAnswers] = useState<Answers>({});
 
   const saveMut = useMutation({
     mutationFn: async () => {
