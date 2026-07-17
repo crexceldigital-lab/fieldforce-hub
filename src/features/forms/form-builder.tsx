@@ -8,9 +8,9 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import type { FormField, FormFieldType, FormInput } from "@/features/master-data/types";
+import type { FormField, FormFieldType } from "@/features/master-data/types";
 import { FORM_FIELD_TYPES } from "@/features/master-data/types";
-import { nextFieldOrder } from "./service";
+import { nextFieldOrder, type FormInput } from "./service";
 
 export function FormBuilder({
   value, onChange,

@@ -29,7 +29,7 @@ import {
   assignForm, assignStore, createCampaign, deleteCampaign,
   unassignForm, unassignStore, updateCampaign, watchCampaignForms,
   watchCampaigns, watchCampaignStores, type CampaignInput,
-} from "./service";
+} from "@/features/campaigns/service";
 
 export function CampaignsPage() {
   const { data: ctx } = useCurrentContext();
