@@ -1,7 +1,8 @@
 import { useState } from "react";
+import { Link } from "@tanstack/react-router";
 import { useMutation } from "@tanstack/react-query";
 import { useLiveQuery } from "dexie-react-hooks";
-import { Eye, FileText, Pencil, Plus, Trash2 } from "lucide-react";
+import { Eye, FileText, Inbox, Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/features/shell/app-shell";
 import { useCurrentContext, usePermission } from "@/features/auth/use-current-org";
