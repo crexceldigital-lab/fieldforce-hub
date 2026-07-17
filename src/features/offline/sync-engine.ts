@@ -75,7 +75,7 @@ async function pushItem(item: OutboxItem): Promise<void> {
     }
 
     // update — optimistic lock via RPC for lockable tables
-    if (["stores", "products", "brands", "categories"].includes(item.entity)) {
+    if (["stores", "products", "brands", "categories", "campaigns", "forms", "form_submissions"].includes(item.entity)) {
       const { id: _drop, ...patch } = item.payload;
       const { data, error } = await supabase.rpc("update_if_unchanged", {
         _table: item.entity,
