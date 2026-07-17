@@ -14,6 +14,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedAppIndexRouteImport } from './routes/_authenticated/app/index'
+import { Route as AuthenticatedAppVisitsRouteImport } from './routes/_authenticated/app/visits'
 import { Route as AuthenticatedAppUsersRouteImport } from './routes/_authenticated/app/users'
 import { Route as AuthenticatedAppTerritoriesRouteImport } from './routes/_authenticated/app/territories'
 import { Route as AuthenticatedAppStoresRouteImport } from './routes/_authenticated/app/stores'
@@ -22,6 +23,8 @@ import { Route as AuthenticatedAppFormsRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedAppCampaignsRouteImport } from './routes/_authenticated/app/campaigns'
 import { Route as AuthenticatedAppStoresStoreIdRouteImport } from './routes/_authenticated/app/stores.$storeId'
 import { Route as AuthenticatedAppStoresStoreIdTimelineRouteImport } from './routes/_authenticated/app/stores.$storeId.timeline'
+import { Route as AuthenticatedAppFormsFormIdResponsesRouteImport } from './routes/_authenticated/app/forms.$formId.responses'
+import { Route as AuthenticatedAppVisitsCampaignIdStoreIdFormIdRouteImport } from './routes/_authenticated/app/visits.$campaignId.$storeId.$formId'
 
 const OnboardingRoute = OnboardingRouteImport.update({
   id: '/onboarding',
@@ -45,6 +48,11 @@ const IndexRoute = IndexRouteImport.update({
 const AuthenticatedAppIndexRoute = AuthenticatedAppIndexRouteImport.update({
   id: '/app/',
   path: '/app/',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedAppVisitsRoute = AuthenticatedAppVisitsRouteImport.update({
+  id: '/app/visits',
+  path: '/app/visits',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedAppUsersRoute = AuthenticatedAppUsersRouteImport.update({
@@ -92,34 +100,52 @@ const AuthenticatedAppStoresStoreIdTimelineRoute =
     path: '/timeline',
     getParentRoute: () => AuthenticatedAppStoresStoreIdRoute,
   } as any)
+const AuthenticatedAppFormsFormIdResponsesRoute =
+  AuthenticatedAppFormsFormIdResponsesRouteImport.update({
+    id: '/$formId/responses',
+    path: '/$formId/responses',
+    getParentRoute: () => AuthenticatedAppFormsRoute,
+  } as any)
+const AuthenticatedAppVisitsCampaignIdStoreIdFormIdRoute =
+  AuthenticatedAppVisitsCampaignIdStoreIdFormIdRouteImport.update({
+    id: '/$campaignId/$storeId/$formId',
+    path: '/$campaignId/$storeId/$formId',
+    getParentRoute: () => AuthenticatedAppVisitsRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/onboarding': typeof OnboardingRoute
   '/app/campaigns': typeof AuthenticatedAppCampaignsRoute
-  '/app/forms': typeof AuthenticatedAppFormsRoute
+  '/app/forms': typeof AuthenticatedAppFormsRouteWithChildren
   '/app/products': typeof AuthenticatedAppProductsRoute
   '/app/stores': typeof AuthenticatedAppStoresRouteWithChildren
   '/app/territories': typeof AuthenticatedAppTerritoriesRoute
   '/app/users': typeof AuthenticatedAppUsersRoute
+  '/app/visits': typeof AuthenticatedAppVisitsRouteWithChildren
   '/app/': typeof AuthenticatedAppIndexRoute
   '/app/stores/$storeId': typeof AuthenticatedAppStoresStoreIdRouteWithChildren
+  '/app/forms/$formId/responses': typeof AuthenticatedAppFormsFormIdResponsesRoute
   '/app/stores/$storeId/timeline': typeof AuthenticatedAppStoresStoreIdTimelineRoute
+  '/app/visits/$campaignId/$storeId/$formId': typeof AuthenticatedAppVisitsCampaignIdStoreIdFormIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/onboarding': typeof OnboardingRoute
   '/app/campaigns': typeof AuthenticatedAppCampaignsRoute
-  '/app/forms': typeof AuthenticatedAppFormsRoute
+  '/app/forms': typeof AuthenticatedAppFormsRouteWithChildren
   '/app/products': typeof AuthenticatedAppProductsRoute
   '/app/stores': typeof AuthenticatedAppStoresRouteWithChildren
   '/app/territories': typeof AuthenticatedAppTerritoriesRoute
   '/app/users': typeof AuthenticatedAppUsersRoute
+  '/app/visits': typeof AuthenticatedAppVisitsRouteWithChildren
   '/app': typeof AuthenticatedAppIndexRoute
   '/app/stores/$storeId': typeof AuthenticatedAppStoresStoreIdRouteWithChildren
+  '/app/forms/$formId/responses': typeof AuthenticatedAppFormsFormIdResponsesRoute
   '/app/stores/$storeId/timeline': typeof AuthenticatedAppStoresStoreIdTimelineRoute
+  '/app/visits/$campaignId/$storeId/$formId': typeof AuthenticatedAppVisitsCampaignIdStoreIdFormIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -128,14 +154,17 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/onboarding': typeof OnboardingRoute
   '/_authenticated/app/campaigns': typeof AuthenticatedAppCampaignsRoute
-  '/_authenticated/app/forms': typeof AuthenticatedAppFormsRoute
+  '/_authenticated/app/forms': typeof AuthenticatedAppFormsRouteWithChildren
   '/_authenticated/app/products': typeof AuthenticatedAppProductsRoute
   '/_authenticated/app/stores': typeof AuthenticatedAppStoresRouteWithChildren
   '/_authenticated/app/territories': typeof AuthenticatedAppTerritoriesRoute
   '/_authenticated/app/users': typeof AuthenticatedAppUsersRoute
+  '/_authenticated/app/visits': typeof AuthenticatedAppVisitsRouteWithChildren
   '/_authenticated/app/': typeof AuthenticatedAppIndexRoute
   '/_authenticated/app/stores/$storeId': typeof AuthenticatedAppStoresStoreIdRouteWithChildren
+  '/_authenticated/app/forms/$formId/responses': typeof AuthenticatedAppFormsFormIdResponsesRoute
   '/_authenticated/app/stores/$storeId/timeline': typeof AuthenticatedAppStoresStoreIdTimelineRoute
+  '/_authenticated/app/visits/$campaignId/$storeId/$formId': typeof AuthenticatedAppVisitsCampaignIdStoreIdFormIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -149,9 +178,12 @@ export interface FileRouteTypes {
     | '/app/stores'
     | '/app/territories'
     | '/app/users'
+    | '/app/visits'
     | '/app/'
     | '/app/stores/$storeId'
+    | '/app/forms/$formId/responses'
     | '/app/stores/$storeId/timeline'
+    | '/app/visits/$campaignId/$storeId/$formId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -163,9 +195,12 @@ export interface FileRouteTypes {
     | '/app/stores'
     | '/app/territories'
     | '/app/users'
+    | '/app/visits'
     | '/app'
     | '/app/stores/$storeId'
+    | '/app/forms/$formId/responses'
     | '/app/stores/$storeId/timeline'
+    | '/app/visits/$campaignId/$storeId/$formId'
   id:
     | '__root__'
     | '/'
@@ -178,9 +213,12 @@ export interface FileRouteTypes {
     | '/_authenticated/app/stores'
     | '/_authenticated/app/territories'
     | '/_authenticated/app/users'
+    | '/_authenticated/app/visits'
     | '/_authenticated/app/'
     | '/_authenticated/app/stores/$storeId'
+    | '/_authenticated/app/forms/$formId/responses'
     | '/_authenticated/app/stores/$storeId/timeline'
+    | '/_authenticated/app/visits/$campaignId/$storeId/$formId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -225,6 +263,13 @@ declare module '@tanstack/react-router' {
       path: '/app'
       fullPath: '/app/'
       preLoaderRoute: typeof AuthenticatedAppIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/app/visits': {
+      id: '/_authenticated/app/visits'
+      path: '/app/visits'
+      fullPath: '/app/visits'
+      preLoaderRoute: typeof AuthenticatedAppVisitsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/app/users': {
@@ -283,8 +328,36 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppStoresStoreIdTimelineRouteImport
       parentRoute: typeof AuthenticatedAppStoresStoreIdRoute
     }
+    '/_authenticated/app/forms/$formId/responses': {
+      id: '/_authenticated/app/forms/$formId/responses'
+      path: '/$formId/responses'
+      fullPath: '/app/forms/$formId/responses'
+      preLoaderRoute: typeof AuthenticatedAppFormsFormIdResponsesRouteImport
+      parentRoute: typeof AuthenticatedAppFormsRoute
+    }
+    '/_authenticated/app/visits/$campaignId/$storeId/$formId': {
+      id: '/_authenticated/app/visits/$campaignId/$storeId/$formId'
+      path: '/$campaignId/$storeId/$formId'
+      fullPath: '/app/visits/$campaignId/$storeId/$formId'
+      preLoaderRoute: typeof AuthenticatedAppVisitsCampaignIdStoreIdFormIdRouteImport
+      parentRoute: typeof AuthenticatedAppVisitsRoute
+    }
   }
 }
+
+interface AuthenticatedAppFormsRouteChildren {
+  AuthenticatedAppFormsFormIdResponsesRoute: typeof AuthenticatedAppFormsFormIdResponsesRoute
+}
+
+const AuthenticatedAppFormsRouteChildren: AuthenticatedAppFormsRouteChildren = {
+  AuthenticatedAppFormsFormIdResponsesRoute:
+    AuthenticatedAppFormsFormIdResponsesRoute,
+}
+
+const AuthenticatedAppFormsRouteWithChildren =
+  AuthenticatedAppFormsRoute._addFileChildren(
+    AuthenticatedAppFormsRouteChildren,
+  )
 
 interface AuthenticatedAppStoresStoreIdRouteChildren {
   AuthenticatedAppStoresStoreIdTimelineRoute: typeof AuthenticatedAppStoresStoreIdTimelineRoute
@@ -316,23 +389,40 @@ const AuthenticatedAppStoresRouteWithChildren =
     AuthenticatedAppStoresRouteChildren,
   )
 
+interface AuthenticatedAppVisitsRouteChildren {
+  AuthenticatedAppVisitsCampaignIdStoreIdFormIdRoute: typeof AuthenticatedAppVisitsCampaignIdStoreIdFormIdRoute
+}
+
+const AuthenticatedAppVisitsRouteChildren: AuthenticatedAppVisitsRouteChildren =
+  {
+    AuthenticatedAppVisitsCampaignIdStoreIdFormIdRoute:
+      AuthenticatedAppVisitsCampaignIdStoreIdFormIdRoute,
+  }
+
+const AuthenticatedAppVisitsRouteWithChildren =
+  AuthenticatedAppVisitsRoute._addFileChildren(
+    AuthenticatedAppVisitsRouteChildren,
+  )
+
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAppCampaignsRoute: typeof AuthenticatedAppCampaignsRoute
-  AuthenticatedAppFormsRoute: typeof AuthenticatedAppFormsRoute
+  AuthenticatedAppFormsRoute: typeof AuthenticatedAppFormsRouteWithChildren
   AuthenticatedAppProductsRoute: typeof AuthenticatedAppProductsRoute
   AuthenticatedAppStoresRoute: typeof AuthenticatedAppStoresRouteWithChildren
   AuthenticatedAppTerritoriesRoute: typeof AuthenticatedAppTerritoriesRoute
   AuthenticatedAppUsersRoute: typeof AuthenticatedAppUsersRoute
+  AuthenticatedAppVisitsRoute: typeof AuthenticatedAppVisitsRouteWithChildren
   AuthenticatedAppIndexRoute: typeof AuthenticatedAppIndexRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAppCampaignsRoute: AuthenticatedAppCampaignsRoute,
-  AuthenticatedAppFormsRoute: AuthenticatedAppFormsRoute,
+  AuthenticatedAppFormsRoute: AuthenticatedAppFormsRouteWithChildren,
   AuthenticatedAppProductsRoute: AuthenticatedAppProductsRoute,
   AuthenticatedAppStoresRoute: AuthenticatedAppStoresRouteWithChildren,
   AuthenticatedAppTerritoriesRoute: AuthenticatedAppTerritoriesRoute,
   AuthenticatedAppUsersRoute: AuthenticatedAppUsersRoute,
+  AuthenticatedAppVisitsRoute: AuthenticatedAppVisitsRouteWithChildren,
   AuthenticatedAppIndexRoute: AuthenticatedAppIndexRoute,
 }
 
