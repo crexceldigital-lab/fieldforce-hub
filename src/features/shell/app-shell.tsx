@@ -6,13 +6,14 @@ import { Button } from "@/components/ui/button";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 
-const NAV = [
+type NavItem = { to: string; label: string; icon: typeof MapPin; exact?: boolean };
+const NAV: NavItem[] = [
   { to: "/app", label: "Dashboard", icon: LayoutDashboard, exact: true },
   { to: "/app/territories", label: "Territories", icon: MapPin },
   { to: "/app/products", label: "Products", icon: Package },
   { to: "/app/stores", label: "Stores", icon: Store },
   { to: "/app/users", label: "Team", icon: Users },
-] as const;
+];
 
 export function AppShell({ children }: { children: ReactNode }) {
   const isMobile = useIsMobile();
