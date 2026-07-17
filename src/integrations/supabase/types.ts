@@ -548,6 +548,15 @@ export type Database = {
         Args: { _name: string; _slug: string }
         Returns: string
       }
+      update_if_unchanged: {
+        Args: {
+          _base_updated_at: string
+          _id: string
+          _patch: Json
+          _table: string
+        }
+        Returns: Json
+      }
     }
     Enums: {
       app_permission:

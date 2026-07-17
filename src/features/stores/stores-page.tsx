@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { useLiveQuery } from "dexie-react-hooks";
 import { Link } from "@tanstack/react-router";
 import { ExternalLink, Pencil, Plus, Store as StoreIcon, Trash2, Upload } from "lucide-react";
 import { toast } from "sonner";
@@ -23,7 +24,7 @@ import {
   STORE_CHANNELS, STORE_TIERS, type StoreRow, type StoreTier,
 } from "@/features/master-data/types";
 import { fetchTerritories } from "@/features/territories/service";
-import { deleteStore, fetchStores, importStoresFromCsv } from "./service";
+import { deleteStore, importStoresFromCsv, watchStores } from "./service";
 import { StoreFormDialog } from "./store-form-dialog";
 
 const tierBadgeClass: Record<StoreTier, string> = {
@@ -38,7 +39,6 @@ export function StoresPage() {
   const orgId = ctx?.organizationId ?? null;
   const canManage = usePermission("stores.manage");
   const canDelete = usePermission("stores.delete");
-  const qc = useQueryClient();
 
   const [search, setSearch] = useState("");
   const [tierFilter, setTierFilter] = useState("all");
@@ -46,28 +46,32 @@ export function StoresPage() {
   const [editing, setEditing] = useState<StoreRow | "new" | null>(null);
   const [importing, setImporting] = useState(false);
 
-  const storesQ = useQuery({ queryKey: ["stores", orgId], queryFn: () => fetchStores(orgId!), enabled: !!orgId });
-  const territoriesQ = useQuery({ queryKey: ["territories", orgId], queryFn: () => fetchTerritories(orgId!), enabled: !!orgId });
+  const stores = useLiveQuery(
+    orgId ? watchStores(orgId) : () => [],
+    [orgId], [] as StoreRow[],
+  ) ?? [];
+  const territoriesQ = useQuery({
+    queryKey: ["territories", orgId], queryFn: () => fetchTerritories(orgId!),
+    enabled: !!orgId,
+  });
   const routeName = (id: string | null) =>
     (territoriesQ.data ?? []).find((t) => t.id === id)?.name ?? "—";
 
-  const invalidate = () => qc.invalidateQueries({ queryKey: ["stores", orgId] });
-
   const deleteMut = useMutation({
-    mutationFn: (id: string) => deleteStore(id),
-    onSuccess: () => { invalidate(); toast.success("Store deleted"); },
+    mutationFn: (id: string) => deleteStore(orgId!, id),
+    onSuccess: () => toast.success("Store deleted (offline-safe)"),
     onError: (e: Error) => toast.error(e.message),
   });
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return (storesQ.data ?? []).filter((s) => {
+    return stores.filter((s) => {
       if (tierFilter !== "all" && s.tier !== tierFilter) return false;
       if (channelFilter !== "all" && s.channel !== channelFilter) return false;
       if (q && !`${s.name} ${s.owner_name ?? ""} ${s.phone ?? ""}`.toLowerCase().includes(q)) return false;
       return true;
     });
-  }, [storesQ.data, search, tierFilter, channelFilter]);
+  }, [stores, search, tierFilter, channelFilter]);
 
   return (
     <AppShell>
@@ -76,7 +80,7 @@ export function StoresPage() {
           <div>
             <h1 className="text-2xl font-semibold text-foreground">Stores</h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              Your retail CRM. Every store is the hub of activity.
+              Your retail CRM. Search, edit, and add stores even without a signal.
             </p>
           </div>
           {canManage && (
@@ -115,18 +119,16 @@ export function StoresPage() {
             </SelectContent>
           </Select>
           <p className="ml-auto text-sm text-muted-foreground">
-            {filtered.length} of {storesQ.data?.length ?? 0} stores
+            {filtered.length} of {stores.length} stores
           </p>
         </div>
 
-        {storesQ.isLoading ? (
-          <p className="text-sm text-muted-foreground">Loading…</p>
-        ) : filtered.length === 0 ? (
+        {filtered.length === 0 ? (
           <div className="rounded-xl border border-dashed bg-card p-12 text-center">
             <StoreIcon className="mx-auto h-8 w-8 text-muted-foreground" />
             <p className="mt-3 text-sm font-medium">No stores found</p>
             <p className="mt-1 text-sm text-muted-foreground">
-              {storesQ.data?.length ? "Adjust your filters." : "Add stores one by one or import a CSV to build your retail universe."}
+              {stores.length ? "Adjust your filters." : "Add stores one by one or import a CSV to build your retail universe."}
             </p>
           </div>
         ) : (
@@ -158,11 +160,9 @@ export function StoresPage() {
                     </TableCell>
                     <TableCell>{s.owner_name ?? "—"}</TableCell>
                     <TableCell className="text-muted-foreground">{s.phone ?? "—"}</TableCell>
+                    <TableCell>{STORE_CHANNELS.find((c) => c.value === s.channel)?.label}</TableCell>
                     <TableCell>
-                      {STORE_CHANNELS.find((c) => c.value === s.channel)?.label}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className={tierBadgeClass[s.tier]}>
+                      <Badge variant="outline" className={tierBadgeClass[s.tier as StoreTier]}>
                         {STORE_TIERS.find((t) => t.value === s.tier)?.label}
                       </Badge>
                     </TableCell>
@@ -205,17 +205,17 @@ export function StoresPage() {
         )}
       </div>
 
-      {editing && (
+      {editing && orgId && (
         <StoreFormDialog
-          orgId={orgId!}
+          orgId={orgId}
           store={editing === "new" ? null : editing}
           onClose={() => setEditing(null)}
-          onSaved={() => { invalidate(); setEditing(null); }}
+          onSaved={() => setEditing(null)}
         />
       )}
 
-      {importing && (
-        <ImportDialog orgId={orgId!} onClose={() => setImporting(false)} onDone={invalidate} />
+      {importing && orgId && (
+        <ImportDialog orgId={orgId} onClose={() => setImporting(false)} onDone={() => { /* live-query auto-refreshes */ }} />
       )}
     </AppShell>
   );
@@ -243,7 +243,7 @@ function ImportDialog({
         route_id: routeId === "__none__" ? null : routeId,
       }),
     onSuccess: (res) => {
-      toast.success(`Imported ${res.ok} store${res.ok === 1 ? "" : "s"}`);
+      toast.success(`Queued ${res.ok} store${res.ok === 1 ? "" : "s"} (offline-safe)`);
       if (res.failed.length) {
         toast.error(`${res.failed.length} line(s) failed — first: line ${res.failed[0].line}: ${res.failed[0].reason}`);
       }
@@ -261,13 +261,13 @@ function ImportDialog({
         </DialogHeader>
         <p className="text-sm text-muted-foreground">
           One store per line: <code>name, owner, phone, latitude, longitude</code>.
-          Only the name is required. Values must not contain commas.
+          Only the name is required.
         </p>
         <Textarea
           rows={8}
           value={csv}
           onChange={(e) => setCsv(e.target.value)}
-          placeholder={"Duka la Mama Amina, Amina Hassan, +255712000001, -6.7924, 39.2083\nKiosk ya Juma, Juma S, +255713000002, ,"}
+          placeholder={"Duka la Mama Amina, Amina Hassan, +255712000001, -6.7924, 39.2083"}
           className="font-mono text-xs"
         />
         <div className="grid gap-3 sm:grid-cols-3">

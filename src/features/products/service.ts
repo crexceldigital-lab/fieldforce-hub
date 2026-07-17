@@ -1,56 +1,54 @@
-import { db } from "@/integrations/supabase/db";
+// Offline-first product/brand/category service.
+// Reads: live-query Dexie (mirror kept fresh by sync-engine).
+// Writes: enqueue in outbox, sync-engine replays with optimistic locking.
+import { localDB } from "@/features/offline/db";
+import { enqueue } from "@/features/offline/outbox";
+import { runSync } from "@/features/offline/sync-engine";
 import type { Brand, Category, Product } from "@/features/master-data/types";
 
-export async function fetchBrands(orgId: string): Promise<Brand[]> {
-  const { data, error } = await db.from("brands").select("*").eq("organization_id", orgId).order("name");
-  if (error) throw error;
-  return data ?? [];
+function uuid(): string {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) return crypto.randomUUID();
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
-export async function createBrand(orgId: string, name: string) {
-  const { data, error } = await db
-    .from("brands")
-    .insert({ organization_id: orgId, name: name.trim() })
-    .select()
-    .single();
-  if (error) throw error;
-  return data as Brand;
+// ---- Reads (cache-backed) ----
+export function watchBrands(orgId: string) {
+  return () => localDB.brands.where("organization_id").equals(orgId).sortBy("name");
+}
+export function watchCategories(orgId: string) {
+  return () => localDB.categories.where("organization_id").equals(orgId).sortBy("name");
+}
+export function watchProducts(orgId: string) {
+  return () => localDB.products.where("organization_id").equals(orgId).sortBy("name");
 }
 
-export async function deleteBrand(id: string) {
-  const { error } = await db.from("brands").delete().eq("id", id);
-  if (error) throw error;
+// ---- Writes (offline-capable) ----
+export async function createBrand(orgId: string, name: string): Promise<Brand> {
+  const now = new Date().toISOString();
+  const row: Brand = { id: uuid(), organization_id: orgId, name: name.trim(), created_at: now };
+  await localDB.brands.put(row);
+  await enqueue({ entity: "brands", op: "create", organizationId: orgId, targetId: row.id, payload: row as unknown as Record<string, unknown> });
+  void runSync(orgId);
+  return row;
+}
+export async function deleteBrand(orgId: string, id: string) {
+  await localDB.brands.delete(id);
+  await enqueue({ entity: "brands", op: "delete", organizationId: orgId, targetId: id, payload: {} });
+  void runSync(orgId);
 }
 
-export async function fetchCategories(orgId: string): Promise<Category[]> {
-  const { data, error } = await db.from("categories").select("*").eq("organization_id", orgId).order("name");
-  if (error) throw error;
-  return data ?? [];
+export async function createCategory(orgId: string, name: string): Promise<Category> {
+  const now = new Date().toISOString();
+  const row: Category = { id: uuid(), organization_id: orgId, name: name.trim(), created_at: now };
+  await localDB.categories.put(row);
+  await enqueue({ entity: "categories", op: "create", organizationId: orgId, targetId: row.id, payload: row as unknown as Record<string, unknown> });
+  void runSync(orgId);
+  return row;
 }
-
-export async function createCategory(orgId: string, name: string) {
-  const { data, error } = await db
-    .from("categories")
-    .insert({ organization_id: orgId, name: name.trim() })
-    .select()
-    .single();
-  if (error) throw error;
-  return data as Category;
-}
-
-export async function deleteCategory(id: string) {
-  const { error } = await db.from("categories").delete().eq("id", id);
-  if (error) throw error;
-}
-
-export async function fetchProducts(orgId: string): Promise<Product[]> {
-  const { data, error } = await db
-    .from("products")
-    .select("*")
-    .eq("organization_id", orgId)
-    .order("name");
-  if (error) throw error;
-  return data ?? [];
+export async function deleteCategory(orgId: string, id: string) {
+  await localDB.categories.delete(id);
+  await enqueue({ entity: "categories", op: "delete", organizationId: orgId, targetId: id, payload: {} });
+  void runSync(orgId);
 }
 
 export type ProductInput = {
@@ -65,22 +63,40 @@ export type ProductInput = {
   is_competitor: boolean;
 };
 
-export async function createProduct(orgId: string, input: ProductInput) {
-  const { error } = await db.from("products").insert({ organization_id: orgId, ...input });
-  if (error) throw error;
+export async function createProduct(orgId: string, input: ProductInput): Promise<Product> {
+  const now = new Date().toISOString();
+  const row: Product = {
+    id: uuid(),
+    organization_id: orgId,
+    image_url: null,
+    created_at: now,
+    updated_at: now,
+    ...input,
+  };
+  await localDB.products.put(row);
+  await enqueue({ entity: "products", op: "create", organizationId: orgId, targetId: row.id, payload: row as unknown as Record<string, unknown> });
+  void runSync(orgId);
+  return row;
 }
 
-export async function updateProduct(id: string, input: ProductInput) {
-  const { error } = await db.from("products").update(input).eq("id", id);
-  if (error) throw error;
+export async function updateProduct(orgId: string, id: string, patch: Partial<ProductInput>) {
+  const existing = await localDB.products.get(id);
+  const baseUpdatedAt = existing?.updated_at ?? null;
+  const now = new Date().toISOString();
+  if (existing) await localDB.products.put({ ...existing, ...patch, updated_at: now });
+  await enqueue({
+    entity: "products", op: "update", organizationId: orgId, targetId: id,
+    payload: patch as Record<string, unknown>, baseUpdatedAt,
+  });
+  void runSync(orgId);
 }
 
-export async function toggleProductActive(id: string, isActive: boolean) {
-  const { error } = await db.from("products").update({ is_active: isActive }).eq("id", id);
-  if (error) throw error;
+export async function toggleProductActive(orgId: string, id: string, isActive: boolean) {
+  await updateProduct(orgId, id, { is_active: isActive });
 }
 
-export async function deleteProduct(id: string) {
-  const { error } = await db.from("products").delete().eq("id", id);
-  if (error) throw error;
+export async function deleteProduct(orgId: string, id: string) {
+  await localDB.products.delete(id);
+  await enqueue({ entity: "products", op: "delete", organizationId: orgId, targetId: id, payload: {} });
+  void runSync(orgId);
 }
