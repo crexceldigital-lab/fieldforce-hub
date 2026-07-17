@@ -1,12 +1,18 @@
 import type { ReactNode } from "react";
-import { Link, useRouterState } from "@tanstack/react-router";
+import { Link } from "@tanstack/react-router";
 import { LayoutDashboard, MapPin, Package, Store, Users, LogOut } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 
-type NavItem = { to: string; label: string; icon: typeof MapPin; exact?: boolean };
+type NavItem = {
+  to: "/app" | "/app/territories" | "/app/products" | "/app/stores" | "/app/users";
+  label: string;
+  icon: typeof MapPin;
+  exact?: boolean;
+};
+
 const NAV: NavItem[] = [
   { to: "/app", label: "Dashboard", icon: LayoutDashboard, exact: true },
   { to: "/app/territories", label: "Territories", icon: MapPin },
@@ -15,12 +21,14 @@ const NAV: NavItem[] = [
   { to: "/app/users", label: "Team", icon: Users },
 ];
 
+const baseLink =
+  "flex items-center gap-3 rounded-md px-3 py-2 text-sm transition text-sidebar-foreground/80 hover:bg-sidebar-accent/40";
+const activeLink = "bg-sidebar-accent text-sidebar-accent-foreground";
+const baseMobile = "flex flex-col items-center gap-1 py-2 text-[11px] text-muted-foreground";
+const activeMobile = "text-primary";
+
 export function AppShell({ children }: { children: ReactNode }) {
   const isMobile = useIsMobile();
-  const pathname = useRouterState({ select: (s) => s.location.pathname });
-
-  const isActive = (to: string, exact?: boolean) =>
-    exact ? pathname === to : pathname === to || pathname.startsWith(`${to}/`);
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
@@ -40,12 +48,9 @@ export function AppShell({ children }: { children: ReactNode }) {
               <Link
                 key={item.to}
                 to={item.to}
-                className={cn(
-                  "flex items-center gap-3 rounded-md px-3 py-2 text-sm transition",
-                  isActive(item.to, item.exact)
-                    ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                    : "text-sidebar-foreground/80 hover:bg-sidebar-accent/40",
-                )}
+                activeOptions={{ exact: item.exact }}
+                className={baseLink}
+                activeProps={{ className: cn(baseLink, activeLink) }}
               >
                 <item.icon className="h-4 w-4" />
                 {item.label}
@@ -66,10 +71,9 @@ export function AppShell({ children }: { children: ReactNode }) {
             <Link
               key={item.to}
               to={item.to}
-              className={cn(
-                "flex flex-col items-center gap-1 py-2 text-[11px]",
-                isActive(item.to, item.exact) ? "text-primary" : "text-muted-foreground",
-              )}
+              activeOptions={{ exact: item.exact }}
+              className={baseMobile}
+              activeProps={{ className: cn(baseMobile, activeMobile) }}
             >
               <item.icon className="h-4 w-4" />
               {item.label}
