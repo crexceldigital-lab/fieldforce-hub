@@ -47,7 +47,7 @@ export async function writeTimelineEvent(input: {
     title: input.title,
     description: input.description ?? null,
     actor_id: userData.user?.id ?? null,
-    metadata: input.metadata ?? {},
+    metadata: (input.metadata ?? {}) as never,
   });
   // Timeline writes are best-effort; don't block the main action.
   if (error) console.error("timeline write failed", error);
