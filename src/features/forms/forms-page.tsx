@@ -108,6 +108,14 @@ export function FormsPage() {
                     <TableCell>{f.schema?.length ?? 0}</TableCell>
                     <TableCell>
                       <div className="flex gap-1">
+                        <Button variant="ghost" size="icon" asChild title="Responses">
+                          <Link
+                            to="/app/forms/$formId/responses"
+                            params={{ formId: f.id }}
+                          >
+                            <Inbox className="h-4 w-4" />
+                          </Link>
+                        </Button>
                         {canManage && (
                           <>
                             <Button variant="ghost" size="icon" onClick={() => setEditing(f)}>
