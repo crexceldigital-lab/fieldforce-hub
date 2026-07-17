@@ -183,10 +183,35 @@ function FormDialog({
         <DialogHeader>
           <DialogTitle>{form ? "Edit form" : "New form"}</DialogTitle>
         </DialogHeader>
-        <FormBuilder
-          value={input}
-          onChange={setInput}
-        />
+        <Tabs defaultValue="build" className="w-full">
+          <TabsList className="mb-4">
+            <TabsTrigger value="build">Build</TabsTrigger>
+            <TabsTrigger value="preview">
+              <Eye className="mr-1 h-4 w-4" /> Live preview
+            </TabsTrigger>
+          </TabsList>
+          <TabsContent value="build">
+            <FormBuilder value={input} onChange={setInput} />
+          </TabsContent>
+          <TabsContent value="preview">
+            <div className="rounded-xl border bg-muted/20 p-4">
+              <div className="mb-3">
+                <h3 className="text-lg font-semibold">{input.name || "Untitled form"}</h3>
+                {input.description && (
+                  <p className="text-sm text-muted-foreground">{input.description}</p>
+                )}
+              </div>
+              <FormRenderer
+                schema={input.schema}
+                answers={previewAnswers}
+                onChange={setPreviewAnswers}
+              />
+              <p className="mt-4 text-xs text-muted-foreground">
+                This is a live preview — nothing is saved until you press "{form ? "Save changes" : "Create form"}".
+              </p>
+            </div>
+          </TabsContent>
+        </Tabs>
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Cancel</Button>
           <Button
