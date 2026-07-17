@@ -1,44 +1,37 @@
-import { useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMemo, useState } from "react";
 import { Link, useParams } from "@tanstack/react-router";
+import { useLiveQuery } from "dexie-react-hooks";
 import {
-  Activity, ArrowLeft, ExternalLink, MapPin, Pencil, Phone, User,
+  Activity, ArrowLeft, ChevronRight, ExternalLink, MapPin, Pencil, Phone, User,
 } from "lucide-react";
 import { AppShell } from "@/features/shell/app-shell";
 import { useCurrentContext, usePermission } from "@/features/auth/use-current-org";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  STORE_CHANNELS, STORE_TIERS, type StoreRow,
-} from "@/features/master-data/types";
+import { STORE_CHANNELS, STORE_TIERS, type StoreRow } from "@/features/master-data/types";
 import { fetchTerritories } from "@/features/territories/service";
-import { fetchStore, fetchTimeline } from "./service";
+import { useQuery } from "@tanstack/react-query";
+import { watchStore, watchTimeline } from "./service";
 import { StoreFormDialog } from "./store-form-dialog";
+import type { ReactNode } from "react";
 
 export function StoreDetailPage() {
-  const { storeId } = useParams({ from: "/_authenticated/app/stores_/$storeId" });
+  const { storeId } = useParams({ from: "/_authenticated/app/stores/$storeId" });
   const { data: ctx } = useCurrentContext();
   const orgId = ctx?.organizationId ?? null;
   const canManage = usePermission("stores.manage");
-  const qc = useQueryClient();
   const [editing, setEditing] = useState(false);
 
-  const storeQ = useQuery({
-    queryKey: ["store", storeId],
-    queryFn: () => fetchStore(storeId),
-  });
-  const timelineQ = useQuery({
-    queryKey: ["store-timeline", storeId],
-    queryFn: () => fetchTimeline(storeId),
-  });
+  const store = useLiveQuery(watchStore(storeId), [storeId]) as StoreRow | undefined;
+  const events = useLiveQuery(watchTimeline(storeId), [storeId]) ?? [];
+  const recentEvents = useMemo(() => events.slice(0, 8), [events]);
+
   const territoriesQ = useQuery({
     queryKey: ["territories", orgId],
     queryFn: () => fetchTerritories(orgId!),
     enabled: !!orgId,
   });
-
-  const store = storeQ.data as StoreRow | null | undefined;
   const routeName = store?.route_id
     ? (territoriesQ.data ?? []).find((t) => t.id === store.route_id)?.name ?? "—"
     : "Unassigned";
@@ -53,7 +46,7 @@ export function StoreDetailPage() {
             </Button>
             <div>
               <h1 className="text-2xl font-semibold text-foreground">
-                {store?.name ?? (storeQ.isLoading ? "Loading…" : "Store not found")}
+                {store?.name ?? "Store not found"}
               </h1>
               {store && (
                 <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
@@ -77,7 +70,6 @@ export function StoreDetailPage() {
 
       {store && (
         <div className="grid gap-6 p-6 md:grid-cols-[340px_1fr] md:p-8">
-          {/* Info card */}
           <Card>
             <CardHeader><CardTitle className="text-base">Store details</CardTitle></CardHeader>
             <CardContent className="space-y-3 text-sm">
@@ -108,19 +100,23 @@ export function StoreDetailPage() {
             </CardContent>
           </Card>
 
-          {/* Timeline */}
           <Card>
-            <CardHeader><CardTitle className="text-base">Timeline</CardTitle></CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="text-base">Recent activity</CardTitle>
+              <Button asChild variant="ghost" size="sm">
+                <Link to="/app/stores/$storeId/timeline" params={{ storeId }}>
+                  Full timeline <ChevronRight className="ml-1 h-3 w-3" />
+                </Link>
+              </Button>
+            </CardHeader>
             <CardContent>
-              {timelineQ.isLoading ? (
-                <p className="text-sm text-muted-foreground">Loading…</p>
-              ) : (timelineQ.data ?? []).length === 0 ? (
+              {recentEvents.length === 0 ? (
                 <p className="text-sm text-muted-foreground">
                   No activity yet. Visits, audits, orders, and issues will appear here.
                 </p>
               ) : (
                 <ol className="relative space-y-5 border-l pl-5">
-                  {(timelineQ.data ?? []).map((ev) => (
+                  {recentEvents.map((ev) => (
                     <li key={ev.id} className="relative">
                       <span className="absolute -left-[26px] top-1 h-2.5 w-2.5 rounded-full bg-primary" />
                       <p className="text-sm font-medium">{ev.title}</p>
@@ -139,16 +135,12 @@ export function StoreDetailPage() {
         </div>
       )}
 
-      {editing && store && (
+      {editing && store && orgId && (
         <StoreFormDialog
-          orgId={orgId!}
+          orgId={orgId}
           store={store}
           onClose={() => setEditing(false)}
-          onSaved={() => {
-            qc.invalidateQueries({ queryKey: ["store", storeId] });
-            qc.invalidateQueries({ queryKey: ["store-timeline", storeId] });
-            setEditing(false);
-          }}
+          onSaved={() => setEditing(false)}
         />
       )}
     </AppShell>
@@ -157,7 +149,7 @@ export function StoreDetailPage() {
 
 function InfoRow({
   icon: Icon, label, value,
-}: { icon: typeof User; label: string; value: React.ReactNode }) {
+}: { icon: typeof User; label: string; value: ReactNode }) {
   return (
     <div className="flex items-start gap-2">
       <Icon className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />

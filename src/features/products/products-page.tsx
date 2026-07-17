@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
+import { useLiveQuery } from "dexie-react-hooks";
 import { Package, Pencil, Plus, Tags, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/features/shell/app-shell";
@@ -19,11 +20,11 @@ import {
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import type { Product } from "@/features/master-data/types";
+import type { Brand, Category, Product } from "@/features/master-data/types";
 import {
   createBrand, createCategory, createProduct, deleteBrand, deleteCategory,
-  deleteProduct, fetchBrands, fetchCategories, fetchProducts, toggleProductActive,
-  updateProduct, type ProductInput,
+  deleteProduct, toggleProductActive, updateProduct, watchBrands, watchCategories,
+  watchProducts, type ProductInput,
 } from "./service";
 
 const NONE = "__none__";
@@ -32,7 +33,6 @@ export function ProductsPage() {
   const { data: ctx } = useCurrentContext();
   const orgId = ctx?.organizationId ?? null;
   const canManage = usePermission("products.manage");
-  const qc = useQueryClient();
 
   const [search, setSearch] = useState("");
   const [brandFilter, setBrandFilter] = useState<string>("all");
@@ -40,38 +40,34 @@ export function ProductsPage() {
   const [editing, setEditing] = useState<Product | "new" | null>(null);
   const [listManager, setListManager] = useState<"brands" | "categories" | null>(null);
 
-  const brandsQ = useQuery({ queryKey: ["brands", orgId], queryFn: () => fetchBrands(orgId!), enabled: !!orgId });
-  const categoriesQ = useQuery({ queryKey: ["categories", orgId], queryFn: () => fetchCategories(orgId!), enabled: !!orgId });
-  const productsQ = useQuery({ queryKey: ["products", orgId], queryFn: () => fetchProducts(orgId!), enabled: !!orgId });
+  const brands = useLiveQuery(orgId ? watchBrands(orgId) : () => [], [orgId], [] as Brand[]) ?? [];
+  const categories = useLiveQuery(orgId ? watchCategories(orgId) : () => [], [orgId], [] as Category[]) ?? [];
+  const products = useLiveQuery(orgId ? watchProducts(orgId) : () => [], [orgId], [] as Product[]) ?? [];
 
-  const brands = brandsQ.data ?? [];
-  const categories = categoriesQ.data ?? [];
   const brandName = (id: string | null) => brands.find((b) => b.id === id)?.name ?? "—";
   const categoryName = (id: string | null) => categories.find((c) => c.id === id)?.name ?? "—";
 
-  const invalidateProducts = () => qc.invalidateQueries({ queryKey: ["products", orgId] });
-
   const toggleMut = useMutation({
-    mutationFn: (vars: { id: string; active: boolean }) => toggleProductActive(vars.id, vars.active),
-    onSuccess: invalidateProducts,
+    mutationFn: (vars: { id: string; active: boolean }) =>
+      toggleProductActive(orgId!, vars.id, vars.active),
     onError: (e: Error) => toast.error(e.message),
   });
   const deleteMut = useMutation({
-    mutationFn: (id: string) => deleteProduct(id),
-    onSuccess: () => { invalidateProducts(); toast.success("Product deleted"); },
+    mutationFn: (id: string) => deleteProduct(orgId!, id),
+    onSuccess: () => toast.success("Product deleted (offline-safe)"),
     onError: (e: Error) => toast.error(e.message),
   });
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return (productsQ.data ?? []).filter((p) => {
+    return products.filter((p) => {
       if (tab === "own" && p.is_competitor) return false;
       if (tab === "competitor" && !p.is_competitor) return false;
       if (brandFilter !== "all" && p.brand_id !== brandFilter) return false;
       if (q && !`${p.name} ${p.sku ?? ""} ${p.barcode ?? ""}`.toLowerCase().includes(q)) return false;
       return true;
     });
-  }, [productsQ.data, search, brandFilter, tab]);
+  }, [products, search, brandFilter, tab]);
 
   return (
     <AppShell>
@@ -121,16 +117,17 @@ export function ProductsPage() {
               <TabsTrigger value="competitor">Competitors</TabsTrigger>
             </TabsList>
           </Tabs>
+          <p className="ml-auto text-sm text-muted-foreground">
+            {filtered.length} of {products.length}
+          </p>
         </div>
 
-        {productsQ.isLoading ? (
-          <p className="text-sm text-muted-foreground">Loading…</p>
-        ) : filtered.length === 0 ? (
+        {filtered.length === 0 ? (
           <div className="rounded-xl border border-dashed bg-card p-12 text-center">
             <Package className="mx-auto h-8 w-8 text-muted-foreground" />
             <p className="mt-3 text-sm font-medium">No products found</p>
             <p className="mt-1 text-sm text-muted-foreground">
-              {productsQ.data?.length
+              {products.length
                 ? "Adjust your filters."
                 : "Add your SKUs and competitor products to power audits."}
             </p>
@@ -196,21 +193,23 @@ export function ProductsPage() {
         )}
       </div>
 
-      {editing && (
+      {editing && orgId && (
         <ProductDialog
-          orgId={orgId!}
+          orgId={orgId}
           product={editing === "new" ? null : editing}
           brands={brands}
           categories={categories}
           onClose={() => setEditing(null)}
-          onSaved={() => { invalidateProducts(); setEditing(null); }}
+          onSaved={() => setEditing(null)}
         />
       )}
 
-      {listManager && (
+      {listManager && orgId && (
         <ListManagerDialog
           kind={listManager}
-          orgId={orgId!}
+          orgId={orgId}
+          brands={brands}
+          categories={categories}
           onClose={() => setListManager(null)}
         />
       )}
@@ -223,8 +222,8 @@ function ProductDialog({
 }: {
   orgId: string;
   product: Product | null;
-  brands: { id: string; name: string }[];
-  categories: { id: string; name: string }[];
+  brands: Brand[];
+  categories: Category[];
   onClose: () => void;
   onSaved: () => void;
 }) {
@@ -241,7 +240,10 @@ function ProductDialog({
   });
 
   const saveMut = useMutation({
-    mutationFn: () => (product ? updateProduct(product.id, form) : createProduct(orgId, form)),
+    mutationFn: async () => {
+      if (product) await updateProduct(orgId, product.id, form);
+      else await createProduct(orgId, form);
+    },
     onSuccess: () => { toast.success(product ? "Product updated" : "Product created"); onSaved(); },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -262,10 +264,7 @@ function ProductDialog({
           </div>
           <div className="space-y-2">
             <Label>Brand</Label>
-            <Select
-              value={form.brand_id ?? NONE}
-              onValueChange={(v) => set("brand_id", v === NONE ? null : v)}
-            >
+            <Select value={form.brand_id ?? NONE} onValueChange={(v) => set("brand_id", v === NONE ? null : v)}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value={NONE}>None</SelectItem>
@@ -275,10 +274,7 @@ function ProductDialog({
           </div>
           <div className="space-y-2">
             <Label>Category</Label>
-            <Select
-              value={form.category_id ?? NONE}
-              onValueChange={(v) => set("category_id", v === NONE ? null : v)}
-            >
+            <Select value={form.category_id ?? NONE} onValueChange={(v) => set("category_id", v === NONE ? null : v)}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value={NONE}>None</SelectItem>
@@ -305,8 +301,7 @@ function ProductDialog({
           <div className="space-y-2">
             <Label>Package size</Label>
             <Input
-              value={form.package_size ?? ""}
-              placeholder="300ml / 24-pack"
+              value={form.package_size ?? ""} placeholder="300ml / 24-pack"
               onChange={(e) => set("package_size", e.target.value || null)}
             />
           </div>
@@ -330,26 +325,31 @@ function ProductDialog({
 }
 
 function ListManagerDialog({
-  kind, orgId, onClose,
-}: { kind: "brands" | "categories"; orgId: string; onClose: () => void }) {
-  const qc = useQueryClient();
+  kind, orgId, brands, categories, onClose,
+}: {
+  kind: "brands" | "categories";
+  orgId: string;
+  brands: Brand[];
+  categories: Category[];
+  onClose: () => void;
+}) {
   const [name, setName] = useState("");
   const isBrand = kind === "brands";
-  const query = useQuery({
-    queryKey: [kind, orgId],
-    queryFn: () => (isBrand ? fetchBrands(orgId) : fetchCategories(orgId)),
-  });
-
-  const invalidate = () => qc.invalidateQueries({ queryKey: [kind, orgId] });
+  const items = isBrand ? brands : categories;
 
   const addMut = useMutation({
-    mutationFn: () => (isBrand ? createBrand(orgId, name) : createCategory(orgId, name)),
-    onSuccess: () => { invalidate(); setName(""); },
+    mutationFn: async () => {
+      if (isBrand) await createBrand(orgId, name);
+      else await createCategory(orgId, name);
+    },
+    onSuccess: () => setName(""),
     onError: (e: Error) => toast.error(e.message),
   });
   const delMut = useMutation({
-    mutationFn: (id: string) => (isBrand ? deleteBrand(id) : deleteCategory(id)),
-    onSuccess: invalidate,
+    mutationFn: async (id: string) => {
+      if (isBrand) await deleteBrand(orgId, id);
+      else await deleteCategory(orgId, id);
+    },
     onError: () => toast.error("Cannot delete — it may be in use by products."),
   });
 
@@ -369,7 +369,7 @@ function ListManagerDialog({
           <Button disabled={!name.trim() || addMut.isPending} onClick={() => addMut.mutate()}>Add</Button>
         </div>
         <div className="max-h-64 space-y-1 overflow-y-auto">
-          {(query.data ?? []).map((item) => (
+          {items.map((item) => (
             <div key={item.id} className="flex items-center justify-between rounded-md bg-accent/50 px-2 py-1.5 text-sm">
               <span>{item.name}</span>
               <button type="button" onClick={() => delMut.mutate(item.id)} aria-label="Delete">
@@ -377,7 +377,7 @@ function ListManagerDialog({
               </button>
             </div>
           ))}
-          {(query.data ?? []).length === 0 && (
+          {items.length === 0 && (
             <p className="py-4 text-center text-sm text-muted-foreground">Nothing here yet.</p>
           )}
         </div>
