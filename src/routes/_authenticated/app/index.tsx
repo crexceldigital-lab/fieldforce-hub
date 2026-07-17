@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { AppShell } from "@/features/shell/app-shell";
 import { supabase } from "@/integrations/supabase/client";
@@ -17,6 +18,13 @@ export const Route = createFileRoute("/_authenticated/app/")({
       throw redirect({ to: "/onboarding" });
     }
   },
+=======
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { AppShell } from "@/features/shell/app-shell";
+import { LayoutDashboard, MapPin, Package, Store, Users } from "lucide-react";
+
+export const Route = createFileRoute("/_authenticated/app/")({
+>>>>>>> e86c25804f54f16e4eae994d4d78f34ff2eab32b
   component: DashboardPage,
 });
 
