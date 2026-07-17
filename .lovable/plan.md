@@ -1,72 +1,71 @@
-# Offline-First Rebuild — Products, Stores, Timeline
+# Build Campaigns (Projects) + Dynamic Form Builder
 
-You picked: **rebuild all four from scratch** + **full write queue with conflict resolution**. This is a large change (~15–20 files). Here's the plan.
+The current FieldForce app has Territories, Products, Stores, and Team. It does not yet have a **Campaigns** module (which you called "projects") or a **data-collection form builder**. I will add both, wired into the existing offline-first layer.
 
-## What we'll build
+## What you will get
 
-### 1. Offline core (`src/features/offline/`)
-- `db.ts` — Dexie schema with 4 tables: `stores`, `products`, `brands`, `categories`, `timeline_events`, `outbox` (pending mutations), `meta` (last-sync timestamps per org).
-- `outbox.ts` — enqueue/dequeue mutations `{ id, entity, op, payload, baseVersion, createdAt, tries, lastError }`.
-- `sync-engine.ts`:
-  - **Pull**: since-last-sync fetch per entity, upsert into Dexie, update meta.
-  - **Push**: drain outbox in FIFO, replay against Supabase, on conflict (row `updated_at` newer than `baseVersion`) mark item as conflicted.
-  - Runs on: app mount, `online` event, focus, and every 60s while online.
-- `use-sync.ts` — React hook exposing `{ status, pending, conflicts, lastSyncAt, syncNow, resolveConflict }`.
-- `use-offline-query.ts` — thin wrapper: reads from Dexie first, falls back to network, subscribes to Dexie liveQuery so UI updates when sync lands.
+1. **Campaigns (Projects)** at `/app/campaigns`
+   - Create a campaign: name, description, date range, status.
+   - Assign stores (multi-select from the org store list) or whole territories.
+   - Link one or more data-collection forms to the campaign.
+   - Offline-safe CRUD with the same Dexie outbox + sync engine used by Stores and Products.
 
-### 2. Conflict resolution
-- Each mutation carries `baseVersion` (the `updated_at` seen when queued).
-- On push, service function compares `baseVersion` vs current row `updated_at`.
-- Mismatch → item goes to `conflicts` state; UI shows a "Resolve" dialog with **mine / theirs / merged** choice per field.
-- New RPC `update_if_unchanged(table, id, patch, base_version)` — atomic optimistic lock; returns the fresh row or a conflict flag.
+2. **Dynamic Form Builder** at `/app/forms`
+   - Create a form, name it, add fields.
+   - Supported field types: text, number, date, single-select, multi-select, yes/no, note, photo, barcode, GPS point.
+   - Each field has label, required toggle, helper options for select types, and ordering.
+   - Form schema is stored as JSONB so it can evolve without schema migrations.
+   - Offline-safe create/update.
 
-### 3. Sync status indicator (`src/features/offline/sync-badge.tsx`)
-Mounted in `AppShell` header:
-- 🟢 Online, all synced
-- 🟡 Syncing (spinner + N pending)
-- 🔴 Offline (N queued)
-- ⚠️ Conflicts (N) — opens resolver drawer
+3. **Integration**
+   - Add Campaigns and Forms to the AppShell navigation.
+   - Dashboard cards updated to show the new modules.
+   - Forms can be linked to campaigns from either the campaign page or the form page.
 
-### 4. Rebuilt pages
-- **`src/features/products/products-page.tsx`** — brands sidebar + categories tabs + product grid, all reading from `useOfflineQuery('products')`. Mutations via `enqueue()`.
-- **`src/features/stores/stores-page.tsx`** — offline-capable list, search/filter run against Dexie so it works offline.
-- **`src/features/stores/store-timeline-page.tsx`** — new dedicated route `/app/stores/$storeId/timeline` rendering events with metadata JSON expander; reads from Dexie liveQuery.
-- Existing `stores-page`, `products-page`, `store-detail-page` get replaced.
+4. **Database changes**
+   - New tables: `campaigns`, `campaign_stores`, `campaign_forms`, `forms`, `form_submissions`.
+   - RLS policies scoped to organization members.
+   - `updated_at` triggers and `update_if_unchanged` allowed-tables updated to include `campaigns` and `forms`.
+   - Offline core extended to include `campaigns`, `forms`, `form_submissions`, and junction tables.
 
-### 5. Backend
-- Migration: add `update_if_unchanged` RPC, add index on `(organization_id, updated_at)` for each synced table for efficient delta pulls.
-
-## Files touched (approx.)
+## Files touched
 
 ```text
-src/features/offline/
-  db.ts                    (new)
-  outbox.ts                (new)
-  sync-engine.ts           (new)
-  use-sync.ts              (new)
-  use-offline-query.ts     (new)
-  sync-badge.tsx           (new)
-  conflict-resolver.tsx    (new)
-src/features/products/
-  products-page.tsx        (rewrite)
-  service.ts               (rewrite → outbox-backed)
-src/features/stores/
-  stores-page.tsx          (rewrite)
-  store-timeline-page.tsx  (new)
-  service.ts               (rewrite → outbox-backed)
-src/routes/_authenticated/app/
-  stores.$storeId.timeline.tsx  (new)
-src/features/shell/app-shell.tsx (add sync badge)
-supabase migration: update_if_unchanged RPC + indexes
+Database
+  - supabase migration (new tables + RLS + triggers)
+
+Offline core
+  - src/features/offline/db.ts                add campaigns, forms, submissions tables
+  - src/features/offline/sync-engine.ts     extend pull/push for new entities
+
+New features
+  - src/features/campaigns/service.ts
+  - src/features/campaigns/campaigns-page.tsx
+  - src/features/campaigns/campaign-form-dialog.tsx
+  - src/features/forms/service.ts
+  - src/features/forms/form-builder.tsx
+  - src/features/forms/forms-page.tsx
+
+Routes
+  - src/routes/_authenticated/app/campaigns.tsx
+  - src/routes/_authenticated/app/forms.tsx
+
+Navigation
+  - src/features/shell/app-shell.tsx          add Campaigns + Forms nav items
+  - src/routes/_authenticated/app/index.tsx  add dashboard cards
 ```
 
-## Scope check before I start
+## After this change
 
-This will take multiple large tool batches and touches critical paths. A few things worth flagging:
+You will:
+1. Go to **Forms** → **New form** → add your questions → publish.
+2. Go to **Campaigns** → **New campaign** → set name/dates → assign stores/territories → link the form(s) → activate.
+3. Field agents will see the assigned campaign in a future "Visit Planning" module.
 
-1. **Timeline events are append-only** — they don't need conflict resolution, just outbox replay. I'll treat them separately.
-2. **Deletes with conflict** — if someone else edited a row you queued a delete for, I default to "your delete wins" unless you'd rather prompt.
-3. **First sync on a big org** could pull thousands of rows. I'll paginate at 500/page.
-4. I'll keep the existing `useCurrentContext` / `usePermission` and RLS behavior — offline layer just caches the same authorized data.
+## Scope note
 
-Reply **go** and I'll build it in one pass, or tell me to trim scope (e.g. skip conflict UI and just do last-write-wins, or ship offline reads only first).
+This plan does **not** include the mobile execution UI (filling a form in a store). That is the next logical step: Visit Planning + Retail Audit execution. I can add it after this if you want end-to-end data collection in the field.
+
+## Offline behavior
+
+Campaign and form edits are queued in the same outbox. When the device is offline, the badge turns red and shows a count. When it reconnects, the sync engine pushes changes to Supabase. Conflicts use the existing optimistic-lock conflict resolver.
