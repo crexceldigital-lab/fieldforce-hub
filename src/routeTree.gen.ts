@@ -19,6 +19,7 @@ import { Route as AuthenticatedAppTerritoriesRouteImport } from './routes/_authe
 import { Route as AuthenticatedAppStoresRouteImport } from './routes/_authenticated/app/stores'
 import { Route as AuthenticatedAppProductsRouteImport } from './routes/_authenticated/app/products'
 import { Route as AuthenticatedAppStoresStoreIdRouteImport } from './routes/_authenticated/app/stores.$storeId'
+import { Route as AuthenticatedAppStoresStoreIdTimelineRouteImport } from './routes/_authenticated/app/stores.$storeId.timeline'
 
 const OnboardingRoute = OnboardingRouteImport.update({
   id: '/onboarding',
@@ -72,6 +73,12 @@ const AuthenticatedAppStoresStoreIdRoute =
     path: '/$storeId',
     getParentRoute: () => AuthenticatedAppStoresRoute,
   } as any)
+const AuthenticatedAppStoresStoreIdTimelineRoute =
+  AuthenticatedAppStoresStoreIdTimelineRouteImport.update({
+    id: '/timeline',
+    path: '/timeline',
+    getParentRoute: () => AuthenticatedAppStoresStoreIdRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -82,7 +89,8 @@ export interface FileRoutesByFullPath {
   '/app/territories': typeof AuthenticatedAppTerritoriesRoute
   '/app/users': typeof AuthenticatedAppUsersRoute
   '/app/': typeof AuthenticatedAppIndexRoute
-  '/app/stores/$storeId': typeof AuthenticatedAppStoresStoreIdRoute
+  '/app/stores/$storeId': typeof AuthenticatedAppStoresStoreIdRouteWithChildren
+  '/app/stores/$storeId/timeline': typeof AuthenticatedAppStoresStoreIdTimelineRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -93,7 +101,8 @@ export interface FileRoutesByTo {
   '/app/territories': typeof AuthenticatedAppTerritoriesRoute
   '/app/users': typeof AuthenticatedAppUsersRoute
   '/app': typeof AuthenticatedAppIndexRoute
-  '/app/stores/$storeId': typeof AuthenticatedAppStoresStoreIdRoute
+  '/app/stores/$storeId': typeof AuthenticatedAppStoresStoreIdRouteWithChildren
+  '/app/stores/$storeId/timeline': typeof AuthenticatedAppStoresStoreIdTimelineRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -106,7 +115,8 @@ export interface FileRoutesById {
   '/_authenticated/app/territories': typeof AuthenticatedAppTerritoriesRoute
   '/_authenticated/app/users': typeof AuthenticatedAppUsersRoute
   '/_authenticated/app/': typeof AuthenticatedAppIndexRoute
-  '/_authenticated/app/stores/$storeId': typeof AuthenticatedAppStoresStoreIdRoute
+  '/_authenticated/app/stores/$storeId': typeof AuthenticatedAppStoresStoreIdRouteWithChildren
+  '/_authenticated/app/stores/$storeId/timeline': typeof AuthenticatedAppStoresStoreIdTimelineRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -120,6 +130,7 @@ export interface FileRouteTypes {
     | '/app/users'
     | '/app/'
     | '/app/stores/$storeId'
+    | '/app/stores/$storeId/timeline'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -131,6 +142,7 @@ export interface FileRouteTypes {
     | '/app/users'
     | '/app'
     | '/app/stores/$storeId'
+    | '/app/stores/$storeId/timeline'
   id:
     | '__root__'
     | '/'
@@ -143,6 +155,7 @@ export interface FileRouteTypes {
     | '/_authenticated/app/users'
     | '/_authenticated/app/'
     | '/_authenticated/app/stores/$storeId'
+    | '/_authenticated/app/stores/$storeId/timeline'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -224,16 +237,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppStoresStoreIdRouteImport
       parentRoute: typeof AuthenticatedAppStoresRoute
     }
+    '/_authenticated/app/stores/$storeId/timeline': {
+      id: '/_authenticated/app/stores/$storeId/timeline'
+      path: '/timeline'
+      fullPath: '/app/stores/$storeId/timeline'
+      preLoaderRoute: typeof AuthenticatedAppStoresStoreIdTimelineRouteImport
+      parentRoute: typeof AuthenticatedAppStoresStoreIdRoute
+    }
   }
 }
 
+interface AuthenticatedAppStoresStoreIdRouteChildren {
+  AuthenticatedAppStoresStoreIdTimelineRoute: typeof AuthenticatedAppStoresStoreIdTimelineRoute
+}
+
+const AuthenticatedAppStoresStoreIdRouteChildren: AuthenticatedAppStoresStoreIdRouteChildren =
+  {
+    AuthenticatedAppStoresStoreIdTimelineRoute:
+      AuthenticatedAppStoresStoreIdTimelineRoute,
+  }
+
+const AuthenticatedAppStoresStoreIdRouteWithChildren =
+  AuthenticatedAppStoresStoreIdRoute._addFileChildren(
+    AuthenticatedAppStoresStoreIdRouteChildren,
+  )
+
 interface AuthenticatedAppStoresRouteChildren {
-  AuthenticatedAppStoresStoreIdRoute: typeof AuthenticatedAppStoresStoreIdRoute
+  AuthenticatedAppStoresStoreIdRoute: typeof AuthenticatedAppStoresStoreIdRouteWithChildren
 }
 
 const AuthenticatedAppStoresRouteChildren: AuthenticatedAppStoresRouteChildren =
   {
-    AuthenticatedAppStoresStoreIdRoute: AuthenticatedAppStoresStoreIdRoute,
+    AuthenticatedAppStoresStoreIdRoute:
+      AuthenticatedAppStoresStoreIdRouteWithChildren,
   }
 
 const AuthenticatedAppStoresRouteWithChildren =
