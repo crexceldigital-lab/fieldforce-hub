@@ -34,6 +34,11 @@ const PULL_TABLES: { entity: EntityName; timeField: "updated_at" | "created_at";
   { entity: "brands", timeField: "created_at", table: "brands" },
   { entity: "categories", timeField: "created_at", table: "categories" },
   { entity: "timeline_events", timeField: "created_at", table: "store_timeline_events" },
+  { entity: "campaigns", timeField: "updated_at", table: "campaigns" },
+  { entity: "forms", timeField: "updated_at", table: "forms" },
+  { entity: "campaign_stores", timeField: "created_at", table: "campaign_stores" },
+  { entity: "campaign_forms", timeField: "created_at", table: "campaign_forms" },
+  { entity: "form_submissions", timeField: "updated_at", table: "form_submissions" },
 ];
 
 async function pullEntity(orgId: string, spec: typeof PULL_TABLES[number]) {
