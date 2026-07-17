@@ -76,7 +76,7 @@ async function pushItem(item: OutboxItem): Promise<void> {
         _table: item.entity,
         _id: item.payload.id as string,
         _patch: patch as never,
-        _base_updated_at: item.baseUpdatedAt,
+        _base_updated_at: item.baseUpdatedAt ?? new Date(0).toISOString(),
       });
       if (error) throw error;
       const result = data as { status: string; current?: Record<string, unknown>; row?: Record<string, unknown> };
