@@ -30,6 +30,7 @@ import {
   unassignForm, unassignStore, updateCampaign, watchCampaignForms,
   watchCampaigns, watchCampaignStores, type CampaignInput,
 } from "@/features/campaigns/service";
+import { CampaignWizard } from "@/features/campaigns/campaign-wizard";
 
 export function CampaignsPage() {
   const { data: ctx } = useCurrentContext();
