@@ -70,7 +70,7 @@ async function writeTimelineLocal(input: {
   await localDB.timeline_events.put(ev);
   await enqueue({
     entity: "timeline_events", op: "create", organizationId: input.orgId,
-    targetId: ev.id, payload: ev,
+    targetId: ev.id, payload: ev as unknown as Record<string, unknown>,
   });
 }
 

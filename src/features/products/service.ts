@@ -27,7 +27,7 @@ export async function createBrand(orgId: string, name: string): Promise<Brand> {
   const now = new Date().toISOString();
   const row: Brand = { id: uuid(), organization_id: orgId, name: name.trim(), created_at: now };
   await localDB.brands.put(row);
-  await enqueue({ entity: "brands", op: "create", organizationId: orgId, targetId: row.id, payload: row });
+  await enqueue({ entity: "brands", op: "create", organizationId: orgId, targetId: row.id, payload: row as unknown as Record<string, unknown> });
   void runSync(orgId);
   return row;
 }
@@ -41,7 +41,7 @@ export async function createCategory(orgId: string, name: string): Promise<Categ
   const now = new Date().toISOString();
   const row: Category = { id: uuid(), organization_id: orgId, name: name.trim(), created_at: now };
   await localDB.categories.put(row);
-  await enqueue({ entity: "categories", op: "create", organizationId: orgId, targetId: row.id, payload: row });
+  await enqueue({ entity: "categories", op: "create", organizationId: orgId, targetId: row.id, payload: row as unknown as Record<string, unknown> });
   void runSync(orgId);
   return row;
 }
@@ -74,7 +74,7 @@ export async function createProduct(orgId: string, input: ProductInput): Promise
     ...input,
   };
   await localDB.products.put(row);
-  await enqueue({ entity: "products", op: "create", organizationId: orgId, targetId: row.id, payload: row });
+  await enqueue({ entity: "products", op: "create", organizationId: orgId, targetId: row.id, payload: row as unknown as Record<string, unknown> });
   void runSync(orgId);
   return row;
 }
