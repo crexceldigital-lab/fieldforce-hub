@@ -14,6 +14,10 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedAppIndexRouteImport } from './routes/_authenticated/app/index'
+import { Route as AuthenticatedAppUsersRouteImport } from './routes/_authenticated/app/users'
+import { Route as AuthenticatedAppTerritoriesRouteImport } from './routes/_authenticated/app/territories'
+import { Route as AuthenticatedAppStoresRouteImport } from './routes/_authenticated/app/stores'
+import { Route as AuthenticatedAppProductsRouteImport } from './routes/_authenticated/app/products'
 import { Route as AuthenticatedAppStoresStoreIdRouteImport } from './routes/_authenticated/app/stores.$storeId'
 
 const OnboardingRoute = OnboardingRouteImport.update({
@@ -40,17 +44,43 @@ const AuthenticatedAppIndexRoute = AuthenticatedAppIndexRouteImport.update({
   path: '/app/',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedAppUsersRoute = AuthenticatedAppUsersRouteImport.update({
+  id: '/app/users',
+  path: '/app/users',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedAppTerritoriesRoute =
+  AuthenticatedAppTerritoriesRouteImport.update({
+    id: '/app/territories',
+    path: '/app/territories',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedAppStoresRoute = AuthenticatedAppStoresRouteImport.update({
+  id: '/app/stores',
+  path: '/app/stores',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedAppProductsRoute =
+  AuthenticatedAppProductsRouteImport.update({
+    id: '/app/products',
+    path: '/app/products',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedAppStoresStoreIdRoute =
   AuthenticatedAppStoresStoreIdRouteImport.update({
-    id: '/app/stores/$storeId',
-    path: '/app/stores/$storeId',
-    getParentRoute: () => AuthenticatedRouteRoute,
+    id: '/$storeId',
+    path: '/$storeId',
+    getParentRoute: () => AuthenticatedAppStoresRoute,
   } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/onboarding': typeof OnboardingRoute
+  '/app/products': typeof AuthenticatedAppProductsRoute
+  '/app/stores': typeof AuthenticatedAppStoresRouteWithChildren
+  '/app/territories': typeof AuthenticatedAppTerritoriesRoute
+  '/app/users': typeof AuthenticatedAppUsersRoute
   '/app/': typeof AuthenticatedAppIndexRoute
   '/app/stores/$storeId': typeof AuthenticatedAppStoresStoreIdRoute
 }
@@ -58,6 +88,10 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/onboarding': typeof OnboardingRoute
+  '/app/products': typeof AuthenticatedAppProductsRoute
+  '/app/stores': typeof AuthenticatedAppStoresRouteWithChildren
+  '/app/territories': typeof AuthenticatedAppTerritoriesRoute
+  '/app/users': typeof AuthenticatedAppUsersRoute
   '/app': typeof AuthenticatedAppIndexRoute
   '/app/stores/$storeId': typeof AuthenticatedAppStoresStoreIdRoute
 }
@@ -67,20 +101,46 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
   '/onboarding': typeof OnboardingRoute
+  '/_authenticated/app/products': typeof AuthenticatedAppProductsRoute
+  '/_authenticated/app/stores': typeof AuthenticatedAppStoresRouteWithChildren
+  '/_authenticated/app/territories': typeof AuthenticatedAppTerritoriesRoute
+  '/_authenticated/app/users': typeof AuthenticatedAppUsersRoute
   '/_authenticated/app/': typeof AuthenticatedAppIndexRoute
   '/_authenticated/app/stores/$storeId': typeof AuthenticatedAppStoresStoreIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/auth' | '/onboarding' | '/app/' | '/app/stores/$storeId'
+  fullPaths:
+    | '/'
+    | '/auth'
+    | '/onboarding'
+    | '/app/products'
+    | '/app/stores'
+    | '/app/territories'
+    | '/app/users'
+    | '/app/'
+    | '/app/stores/$storeId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/auth' | '/onboarding' | '/app' | '/app/stores/$storeId'
+  to:
+    | '/'
+    | '/auth'
+    | '/onboarding'
+    | '/app/products'
+    | '/app/stores'
+    | '/app/territories'
+    | '/app/users'
+    | '/app'
+    | '/app/stores/$storeId'
   id:
     | '__root__'
     | '/'
     | '/_authenticated'
     | '/auth'
     | '/onboarding'
+    | '/_authenticated/app/products'
+    | '/_authenticated/app/stores'
+    | '/_authenticated/app/territories'
+    | '/_authenticated/app/users'
     | '/_authenticated/app/'
     | '/_authenticated/app/stores/$storeId'
   fileRoutesById: FileRoutesById
@@ -129,24 +189,72 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/app/users': {
+      id: '/_authenticated/app/users'
+      path: '/app/users'
+      fullPath: '/app/users'
+      preLoaderRoute: typeof AuthenticatedAppUsersRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/app/territories': {
+      id: '/_authenticated/app/territories'
+      path: '/app/territories'
+      fullPath: '/app/territories'
+      preLoaderRoute: typeof AuthenticatedAppTerritoriesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/app/stores': {
+      id: '/_authenticated/app/stores'
+      path: '/app/stores'
+      fullPath: '/app/stores'
+      preLoaderRoute: typeof AuthenticatedAppStoresRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/app/products': {
+      id: '/_authenticated/app/products'
+      path: '/app/products'
+      fullPath: '/app/products'
+      preLoaderRoute: typeof AuthenticatedAppProductsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/app/stores/$storeId': {
       id: '/_authenticated/app/stores/$storeId'
-      path: '/app/stores/$storeId'
+      path: '/$storeId'
       fullPath: '/app/stores/$storeId'
       preLoaderRoute: typeof AuthenticatedAppStoresStoreIdRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
+      parentRoute: typeof AuthenticatedAppStoresRoute
     }
   }
 }
 
-interface AuthenticatedRouteRouteChildren {
-  AuthenticatedAppIndexRoute: typeof AuthenticatedAppIndexRoute
+interface AuthenticatedAppStoresRouteChildren {
   AuthenticatedAppStoresStoreIdRoute: typeof AuthenticatedAppStoresStoreIdRoute
 }
 
+const AuthenticatedAppStoresRouteChildren: AuthenticatedAppStoresRouteChildren =
+  {
+    AuthenticatedAppStoresStoreIdRoute: AuthenticatedAppStoresStoreIdRoute,
+  }
+
+const AuthenticatedAppStoresRouteWithChildren =
+  AuthenticatedAppStoresRoute._addFileChildren(
+    AuthenticatedAppStoresRouteChildren,
+  )
+
+interface AuthenticatedRouteRouteChildren {
+  AuthenticatedAppProductsRoute: typeof AuthenticatedAppProductsRoute
+  AuthenticatedAppStoresRoute: typeof AuthenticatedAppStoresRouteWithChildren
+  AuthenticatedAppTerritoriesRoute: typeof AuthenticatedAppTerritoriesRoute
+  AuthenticatedAppUsersRoute: typeof AuthenticatedAppUsersRoute
+  AuthenticatedAppIndexRoute: typeof AuthenticatedAppIndexRoute
+}
+
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedAppProductsRoute: AuthenticatedAppProductsRoute,
+  AuthenticatedAppStoresRoute: AuthenticatedAppStoresRouteWithChildren,
+  AuthenticatedAppTerritoriesRoute: AuthenticatedAppTerritoriesRoute,
+  AuthenticatedAppUsersRoute: AuthenticatedAppUsersRoute,
   AuthenticatedAppIndexRoute: AuthenticatedAppIndexRoute,
-  AuthenticatedAppStoresStoreIdRoute: AuthenticatedAppStoresStoreIdRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
