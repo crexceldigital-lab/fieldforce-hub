@@ -1,7 +1,8 @@
 import { useState } from "react";
+import { Link } from "@tanstack/react-router";
 import { useMutation } from "@tanstack/react-query";
 import { useLiveQuery } from "dexie-react-hooks";
-import { FileText, Pencil, Plus, Trash2 } from "lucide-react";
+import { Eye, FileText, Inbox, Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/features/shell/app-shell";
 import { useCurrentContext, usePermission } from "@/features/auth/use-current-org";
@@ -14,10 +15,12 @@ import {
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import type { Form } from "@/features/master-data/types";
 import { FORM_STATUSES } from "@/features/master-data/types";
 import { createForm, deleteForm, updateForm, watchForms, type FormInput } from "./service";
 import { FormBuilder } from "./form-builder";
+import { FormRenderer, type Answers } from "./form-renderer";
 
 export function FormsPage() {
   const { data: ctx } = useCurrentContext();
@@ -106,6 +109,14 @@ export function FormsPage() {
                     <TableCell>{f.schema?.length ?? 0}</TableCell>
                     <TableCell>
                       <div className="flex gap-1">
+                        <Button variant="ghost" size="icon" asChild title="Responses">
+                          <Link
+                            to="/app/forms/$formId/responses"
+                            params={{ formId: f.id }}
+                          >
+                            <Inbox className="h-4 w-4" />
+                          </Link>
+                        </Button>
                         {canManage && (
                           <>
                             <Button variant="ghost" size="icon" onClick={() => setEditing(f)}>
@@ -164,6 +175,7 @@ function FormDialog({
     status: form?.status ?? "draft",
     schema: form?.schema ?? [],
   });
+  const [previewAnswers, setPreviewAnswers] = useState<Answers>({});
 
   const saveMut = useMutation({
     mutationFn: async () => {
@@ -183,10 +195,35 @@ function FormDialog({
         <DialogHeader>
           <DialogTitle>{form ? "Edit form" : "New form"}</DialogTitle>
         </DialogHeader>
-        <FormBuilder
-          value={input}
-          onChange={setInput}
-        />
+        <Tabs defaultValue="build" className="w-full">
+          <TabsList className="mb-4">
+            <TabsTrigger value="build">Build</TabsTrigger>
+            <TabsTrigger value="preview">
+              <Eye className="mr-1 h-4 w-4" /> Live preview
+            </TabsTrigger>
+          </TabsList>
+          <TabsContent value="build">
+            <FormBuilder value={input} onChange={setInput} />
+          </TabsContent>
+          <TabsContent value="preview">
+            <div className="rounded-xl border bg-muted/20 p-4">
+              <div className="mb-3">
+                <h3 className="text-lg font-semibold">{input.name || "Untitled form"}</h3>
+                {input.description && (
+                  <p className="text-sm text-muted-foreground">{input.description}</p>
+                )}
+              </div>
+              <FormRenderer
+                schema={input.schema}
+                answers={previewAnswers}
+                onChange={setPreviewAnswers}
+              />
+              <p className="mt-4 text-xs text-muted-foreground">
+                This is a live preview — nothing is saved until you press "{form ? "Save changes" : "Create form"}".
+              </p>
+            </div>
+          </TabsContent>
+        </Tabs>
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Cancel</Button>
           <Button

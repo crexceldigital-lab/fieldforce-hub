@@ -30,6 +30,7 @@ import {
   unassignForm, unassignStore, updateCampaign, watchCampaignForms,
   watchCampaigns, watchCampaignStores, type CampaignInput,
 } from "@/features/campaigns/service";
+import { CampaignWizard } from "@/features/campaigns/campaign-wizard";
 
 export function CampaignsPage() {
   const { data: ctx } = useCurrentContext();
@@ -124,10 +125,13 @@ export function CampaignsPage() {
         )}
       </div>
 
-      {editing && orgId && (
+      {editing === "new" && orgId && (
+        <CampaignWizard orgId={orgId} onClose={() => setEditing(null)} />
+      )}
+      {editing && editing !== "new" && orgId && (
         <CampaignDialog
           orgId={orgId}
-          campaign={editing === "new" ? null : editing}
+          campaign={editing}
           onClose={() => setEditing(null)}
         />
       )}
