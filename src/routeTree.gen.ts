@@ -18,6 +18,8 @@ import { Route as AuthenticatedAppUsersRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedAppTerritoriesRouteImport } from './routes/_authenticated/app/territories'
 import { Route as AuthenticatedAppStoresRouteImport } from './routes/_authenticated/app/stores'
 import { Route as AuthenticatedAppProductsRouteImport } from './routes/_authenticated/app/products'
+import { Route as AuthenticatedAppFormsRouteImport } from './routes/_authenticated/app/forms'
+import { Route as AuthenticatedAppCampaignsRouteImport } from './routes/_authenticated/app/campaigns'
 import { Route as AuthenticatedAppStoresStoreIdRouteImport } from './routes/_authenticated/app/stores.$storeId'
 import { Route as AuthenticatedAppStoresStoreIdTimelineRouteImport } from './routes/_authenticated/app/stores.$storeId.timeline'
 
@@ -67,6 +69,17 @@ const AuthenticatedAppProductsRoute =
     path: '/app/products',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedAppFormsRoute = AuthenticatedAppFormsRouteImport.update({
+  id: '/app/forms',
+  path: '/app/forms',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedAppCampaignsRoute =
+  AuthenticatedAppCampaignsRouteImport.update({
+    id: '/app/campaigns',
+    path: '/app/campaigns',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedAppStoresStoreIdRoute =
   AuthenticatedAppStoresStoreIdRouteImport.update({
     id: '/$storeId',
@@ -84,6 +97,8 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/onboarding': typeof OnboardingRoute
+  '/app/campaigns': typeof AuthenticatedAppCampaignsRoute
+  '/app/forms': typeof AuthenticatedAppFormsRoute
   '/app/products': typeof AuthenticatedAppProductsRoute
   '/app/stores': typeof AuthenticatedAppStoresRouteWithChildren
   '/app/territories': typeof AuthenticatedAppTerritoriesRoute
@@ -96,6 +111,8 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/onboarding': typeof OnboardingRoute
+  '/app/campaigns': typeof AuthenticatedAppCampaignsRoute
+  '/app/forms': typeof AuthenticatedAppFormsRoute
   '/app/products': typeof AuthenticatedAppProductsRoute
   '/app/stores': typeof AuthenticatedAppStoresRouteWithChildren
   '/app/territories': typeof AuthenticatedAppTerritoriesRoute
@@ -110,6 +127,8 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
   '/onboarding': typeof OnboardingRoute
+  '/_authenticated/app/campaigns': typeof AuthenticatedAppCampaignsRoute
+  '/_authenticated/app/forms': typeof AuthenticatedAppFormsRoute
   '/_authenticated/app/products': typeof AuthenticatedAppProductsRoute
   '/_authenticated/app/stores': typeof AuthenticatedAppStoresRouteWithChildren
   '/_authenticated/app/territories': typeof AuthenticatedAppTerritoriesRoute
@@ -124,6 +143,8 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/onboarding'
+    | '/app/campaigns'
+    | '/app/forms'
     | '/app/products'
     | '/app/stores'
     | '/app/territories'
@@ -136,6 +157,8 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/onboarding'
+    | '/app/campaigns'
+    | '/app/forms'
     | '/app/products'
     | '/app/stores'
     | '/app/territories'
@@ -149,6 +172,8 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/auth'
     | '/onboarding'
+    | '/_authenticated/app/campaigns'
+    | '/_authenticated/app/forms'
     | '/_authenticated/app/products'
     | '/_authenticated/app/stores'
     | '/_authenticated/app/territories'
@@ -230,6 +255,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppProductsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/app/forms': {
+      id: '/_authenticated/app/forms'
+      path: '/app/forms'
+      fullPath: '/app/forms'
+      preLoaderRoute: typeof AuthenticatedAppFormsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/app/campaigns': {
+      id: '/_authenticated/app/campaigns'
+      path: '/app/campaigns'
+      fullPath: '/app/campaigns'
+      preLoaderRoute: typeof AuthenticatedAppCampaignsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/app/stores/$storeId': {
       id: '/_authenticated/app/stores/$storeId'
       path: '/$storeId'
@@ -278,6 +317,8 @@ const AuthenticatedAppStoresRouteWithChildren =
   )
 
 interface AuthenticatedRouteRouteChildren {
+  AuthenticatedAppCampaignsRoute: typeof AuthenticatedAppCampaignsRoute
+  AuthenticatedAppFormsRoute: typeof AuthenticatedAppFormsRoute
   AuthenticatedAppProductsRoute: typeof AuthenticatedAppProductsRoute
   AuthenticatedAppStoresRoute: typeof AuthenticatedAppStoresRouteWithChildren
   AuthenticatedAppTerritoriesRoute: typeof AuthenticatedAppTerritoriesRoute
@@ -286,6 +327,8 @@ interface AuthenticatedRouteRouteChildren {
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedAppCampaignsRoute: AuthenticatedAppCampaignsRoute,
+  AuthenticatedAppFormsRoute: AuthenticatedAppFormsRoute,
   AuthenticatedAppProductsRoute: AuthenticatedAppProductsRoute,
   AuthenticatedAppStoresRoute: AuthenticatedAppStoresRouteWithChildren,
   AuthenticatedAppTerritoriesRoute: AuthenticatedAppTerritoriesRoute,
