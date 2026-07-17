@@ -124,10 +124,13 @@ export function CampaignsPage() {
         )}
       </div>
 
-      {editing && orgId && (
+      {editing === "new" && orgId && (
+        <CampaignWizard orgId={orgId} onClose={() => setEditing(null)} />
+      )}
+      {editing && editing !== "new" && orgId && (
         <CampaignDialog
           orgId={orgId}
-          campaign={editing === "new" ? null : editing}
+          campaign={editing}
           onClose={() => setEditing(null)}
         />
       )}
