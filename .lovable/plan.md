@@ -1,66 +1,72 @@
-# Revoltek FieldForce — Phase 1 Build Plan
+# Offline-First Rebuild — Products, Stores, Timeline
 
-This is a large, multi-module platform. I'll build Phase 1 in sequenced milestones so we get a working, demoable product at each step rather than a half-finished monolith. Please confirm the plan (or tell me which milestone to prioritize/skip) before I start.
+You picked: **rebuild all four from scratch** + **full write queue with conflict resolution**. This is a large change (~15–20 files). Here's the plan.
 
-## Foundation (Milestone 0)
+## What we'll build
 
-- Enable Lovable Cloud (Supabase: auth, DB, storage, realtime, edge functions).
-- Feature-based folder structure: `src/features/{territories,products,campaigns,forms,stores,visits,audits,competitors,issues,tasks,notifications,kpis,dashboards,automation,permissions}` + shared `src/lib`, `src/types`, `src/services`.
-- Design system: dark sidebar shell, emerald accent, Inter font, semantic tokens in `styles.css`, score/status/sync badges, empty states.
-- Auth (email/password + Google), org creation on signup, multi-tenant `organization_id` on every table with RLS.
-- Permission matrix: `permissions` enum, `roles` (org-scoped, editable), `role_permissions`, `user_roles`, `has_permission()` security-definer function. Seed 4 role templates (Super Admin, Org Admin, Field Agent, Client).
-- App shell: dark sidebar (desktop) / bottom nav (mobile/agents), notification bell, org switcher, profile menu.
-- Offline infrastructure: IndexedDB (Dexie) write queue, sync service with exp. backoff, sync-status indicators, connectivity banner, conflict log table.
-- API settings page (org API key + endpoint docs).
+### 1. Offline core (`src/features/offline/`)
+- `db.ts` — Dexie schema with 4 tables: `stores`, `products`, `brands`, `categories`, `timeline_events`, `outbox` (pending mutations), `meta` (last-sync timestamps per org).
+- `outbox.ts` — enqueue/dequeue mutations `{ id, entity, op, payload, baseVersion, createdAt, tries, lastError }`.
+- `sync-engine.ts`:
+  - **Pull**: since-last-sync fetch per entity, upsert into Dexie, update meta.
+  - **Push**: drain outbox in FIFO, replay against Supabase, on conflict (row `updated_at` newer than `baseVersion`) mark item as conflicted.
+  - Runs on: app mount, `online` event, focus, and every 60s while online.
+- `use-sync.ts` — React hook exposing `{ status, pending, conflicts, lastSyncAt, syncNow, resolveConflict }`.
+- `use-offline-query.ts` — thin wrapper: reads from Dexie first, falls back to network, subscribes to Dexie liveQuery so UI updates when sync lands.
 
-## Milestone 1 — Core master data
+### 2. Conflict resolution
+- Each mutation carries `baseVersion` (the `updated_at` seen when queued).
+- On push, service function compares `baseVersion` vs current row `updated_at`.
+- Mismatch → item goes to `conflicts` state; UI shows a "Resolve" dialog with **mine / theirs / merged** choice per field.
+- New RPC `update_if_unchanged(table, id, patch, base_version)` — atomic optimistic lock; returns the fresh row or a conflict flag.
 
-- Territory tree (Country→Region→District→Ward→Route) with editor + CSV import.
-- Product catalog: products, brands, categories, CSV import.
-- Store CRM: profiles, channel, tier, GPS, photos, map view (OpenStreetMap/Leaflet), CSV import, store timeline table + event writers.
-- Users: invite, assign role, assign agents to routes / managers to regions.
+### 3. Sync status indicator (`src/features/offline/sync-badge.tsx`)
+Mounted in `AppShell` header:
+- 🟢 Online, all synced
+- 🟡 Syncing (spinner + N pending)
+- 🔴 Offline (N queued)
+- ⚠️ Conflicts (N) — opens resolver drawer
 
-## Milestone 2 — Campaigns + Form Engine
+### 4. Rebuilt pages
+- **`src/features/products/products-page.tsx`** — brands sidebar + categories tabs + product grid, all reading from `useOfflineQuery('products')`. Mutations via `enqueue()`.
+- **`src/features/stores/stores-page.tsx`** — offline-capable list, search/filter run against Dexie so it works offline.
+- **`src/features/stores/store-timeline-page.tsx`** — new dedicated route `/app/stores/$storeId/timeline` rendering events with metadata JSON expander; reads from Dexie liveQuery.
+- Existing `stores-page`, `products-page`, `store-detail-page` get replaced.
 
-- Campaigns CRUD + status + targeting (regions, products, managers, budget).
-- Kobo-inspired form builder: drag-and-drop, all field types (incl. product grid, GPS, photo, signature, barcode, audio), skip logic, required flags, bilingual EN/SW labels, versioning.
-- Form fill-out UI: mobile-first, one-section-per-screen, progress, drafts in IndexedDB, offline submit queue.
+### 5. Backend
+- Migration: add `update_if_unchanged` RPC, add index on `(organization_id, updated_at)` for each synced table for efficient delta pulls.
 
-## Milestone 3 — Visits, Audits, Competitors
+## Files touched (approx.)
 
-- Visit plans (one-off + recurring), agent "Today" screen offline.
-- Check-in/out with GPS + 200m mismatch flagging, time-on-site.
-- Retail Audit specialized form (per-product availability, facings, price, promo, expiry, cooler); auto-computed Execution/Visibility/Compliance scores; auto out-of-stock records.
-- Competitor intelligence entries + report (price table, promo feed, shelf-share trends).
-- Photo pipeline: client-side compression, Supabase Storage, `ai_status`/`ai_results` metadata.
+```text
+src/features/offline/
+  db.ts                    (new)
+  outbox.ts                (new)
+  sync-engine.ts           (new)
+  use-sync.ts              (new)
+  use-offline-query.ts     (new)
+  sync-badge.tsx           (new)
+  conflict-resolver.tsx    (new)
+src/features/products/
+  products-page.tsx        (rewrite)
+  service.ts               (rewrite → outbox-backed)
+src/features/stores/
+  stores-page.tsx          (rewrite)
+  store-timeline-page.tsx  (new)
+  service.ts               (rewrite → outbox-backed)
+src/routes/_authenticated/app/
+  stores.$storeId.timeline.tsx  (new)
+src/features/shell/app-shell.tsx (add sync badge)
+supabase migration: update_if_unchanged RPC + indexes
+```
 
-## Milestone 4 — Issues, Tasks, Notifications, Automation, KPIs, Dashboards
+## Scope check before I start
 
-- Issue reporting + status workflow.
-- Task module (assign, deadline, photo-proof).
-- Notification center: realtime, per-user preferences, all event types.
-- Generic events→conditions→actions automation engine; ship the OOS→notify+restock-task rule.
-- KPI engine: define targets, compute actuals, RAG status.
-- Manager Ops dashboard (live tiles, agent map, alert feed, drill-downs).
-- Client dashboard (read-only, chart-heavy, CSV export).
+This will take multiple large tool batches and touches critical paths. A few things worth flagging:
 
-## Milestone 5 — Seed data
+1. **Timeline events are append-only** — they don't need conflict resolution, just outbox replay. I'll treat them separately.
+2. **Deletes with conflict** — if someone else edited a row you queued a delete for, I default to "your delete wins" unless you'd rather prompt.
+3. **First sync on a big org** could pull thousands of rows. I'll paginate at 500/page.
+4. I'll keep the existing `useCurrentContext` / `usePermission` and RLS behavior — offline layer just caches the same authorized data.
 
-- Demo FMCG Ltd org: TZ territory tree, 15 SKUs across 2 brands + competitors, 1 campaign, 2 managers, 5 agents, 30 stores, 1 audit template, 1 consumer survey, 2 weeks of visits/audits/OOS/competitor/issue/notification data.
-
-## Technical notes
-
-- Data model highlights: `organizations`, `profiles`, `roles`, `permissions`, `user_roles`, `territories` (self-referential), `territory_assignments`, `brands`, `categories`, `products`, `stores`, `store_timeline_events`, `campaigns`, `campaign_targets`, `forms`, `form_versions`, `form_submissions`, `visits`, `visit_plans`, `audit_results`, `product_availability`, `competitor_entries`, `photos`, `issues`, `tasks`, `notifications`, `notification_preferences`, `kpi_definitions`, `kpi_results`, `automation_rules`, `automation_runs`, `sync_conflicts`, `api_keys`.
-- Every table: `organization_id`, RLS by org + permission checks, `GRANT` block per rules, `created_at/updated_at/created_by`.
-- Photos in Storage bucket `photos` (private) + signed URLs.
-- Edge functions: `submit-visit` (server-side scoring, timeline writes, automation trigger), `run-automation`, webhook stubs.
-- Frontend: TanStack Query for reads, service layer per feature, Dexie for offline queue, background sync via `navigator.onLine` + focus events, Zod validation everywhere.
-
-## What I need from you
-
-1. Approve the plan (or say which milestones to drop/reorder).
-2. Confirm I should **enable Lovable Cloud** now.
-3. Two design decisions:
-   - Emerald accent shade preference? (I'll pick a deep emerald if you have no opinion.)
-   - Agents on mobile: bottom nav with 4 tabs (Today, Stores, Forms, Me) — OK?
-4. Given the scale, this will run across many turns. **Confirm you want me to proceed milestone by milestone** and I'll start with Milestone 0 immediately after approval.
+Reply **go** and I'll build it in one pass, or tell me to trim scope (e.g. skip conflict UI and just do last-write-wins, or ship offline reads only first).
