@@ -47,7 +47,7 @@ export async function writeTimelineEvent(input: {
     title: input.title,
     description: input.description ?? null,
     actor_id: userData.user?.id ?? null,
-    metadata: input.metadata ?? {},
+    metadata: (input.metadata ?? {}) as never,
   });
   // Timeline writes are best-effort; don't block the main action.
   if (error) console.error("timeline write failed", error);
@@ -95,7 +95,7 @@ export async function fetchTimeline(storeId: string): Promise<TimelineEvent[]> {
     .order("created_at", { ascending: false })
     .limit(100);
   if (error) throw error;
-  return data ?? [];
+  return (data ?? []) as unknown as TimelineEvent[];
 }
 
 /**

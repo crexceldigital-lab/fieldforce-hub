@@ -14,6 +14,64 @@ export type Database = {
   }
   public: {
     Tables: {
+      brands: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          organization_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          organization_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          organization_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "brands_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      categories: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          organization_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          organization_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          organization_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "categories_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organizations: {
         Row: {
           created_at: string
@@ -43,6 +101,79 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      products: {
+        Row: {
+          barcode: string | null
+          brand_id: string | null
+          category_id: string | null
+          created_at: string
+          id: string
+          image_url: string | null
+          is_active: boolean
+          is_competitor: boolean
+          name: string
+          organization_id: string
+          package_size: string | null
+          sku: string | null
+          unit_price: number | null
+          updated_at: string
+        }
+        Insert: {
+          barcode?: string | null
+          brand_id?: string | null
+          category_id?: string | null
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          is_competitor?: boolean
+          name: string
+          organization_id: string
+          package_size?: string | null
+          sku?: string | null
+          unit_price?: number | null
+          updated_at?: string
+        }
+        Update: {
+          barcode?: string | null
+          brand_id?: string | null
+          category_id?: string | null
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          is_competitor?: boolean
+          name?: string
+          organization_id?: string
+          package_size?: string | null
+          sku?: string | null
+          unit_price?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "products_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "products_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "products_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
@@ -149,6 +280,213 @@ export type Database = {
           },
         ]
       }
+      store_timeline_events: {
+        Row: {
+          actor_id: string | null
+          created_at: string
+          description: string | null
+          event_type: string
+          id: string
+          metadata: Json
+          organization_id: string
+          store_id: string
+          title: string
+        }
+        Insert: {
+          actor_id?: string | null
+          created_at?: string
+          description?: string | null
+          event_type: string
+          id?: string
+          metadata?: Json
+          organization_id: string
+          store_id: string
+          title: string
+        }
+        Update: {
+          actor_id?: string | null
+          created_at?: string
+          description?: string | null
+          event_type?: string
+          id?: string
+          metadata?: Json
+          organization_id?: string
+          store_id?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "store_timeline_events_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "store_timeline_events_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      stores: {
+        Row: {
+          channel: Database["public"]["Enums"]["store_channel"]
+          created_at: string
+          created_by: string | null
+          credit_status: string | null
+          id: string
+          latitude: number | null
+          longitude: number | null
+          name: string
+          notes: string | null
+          organization_id: string
+          owner_name: string | null
+          phone: string | null
+          photo_url: string | null
+          route_id: string | null
+          tier: Database["public"]["Enums"]["store_tier"]
+          updated_at: string
+        }
+        Insert: {
+          channel?: Database["public"]["Enums"]["store_channel"]
+          created_at?: string
+          created_by?: string | null
+          credit_status?: string | null
+          id?: string
+          latitude?: number | null
+          longitude?: number | null
+          name: string
+          notes?: string | null
+          organization_id: string
+          owner_name?: string | null
+          phone?: string | null
+          photo_url?: string | null
+          route_id?: string | null
+          tier?: Database["public"]["Enums"]["store_tier"]
+          updated_at?: string
+        }
+        Update: {
+          channel?: Database["public"]["Enums"]["store_channel"]
+          created_at?: string
+          created_by?: string | null
+          credit_status?: string | null
+          id?: string
+          latitude?: number | null
+          longitude?: number | null
+          name?: string
+          notes?: string | null
+          organization_id?: string
+          owner_name?: string | null
+          phone?: string | null
+          photo_url?: string | null
+          route_id?: string | null
+          tier?: Database["public"]["Enums"]["store_tier"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stores_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stores_route_id_fkey"
+            columns: ["route_id"]
+            isOneToOne: false
+            referencedRelation: "territories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      territories: {
+        Row: {
+          created_at: string
+          id: string
+          level: Database["public"]["Enums"]["territory_level"]
+          name: string
+          organization_id: string
+          parent_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          level: Database["public"]["Enums"]["territory_level"]
+          name: string
+          organization_id: string
+          parent_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          level?: Database["public"]["Enums"]["territory_level"]
+          name?: string
+          organization_id?: string
+          parent_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "territories_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "territories_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "territories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      territory_assignments: {
+        Row: {
+          created_at: string
+          id: string
+          organization_id: string
+          territory_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          organization_id: string
+          territory_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          organization_id?: string
+          territory_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "territory_assignments_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "territory_assignments_territory_id_fkey"
+            columns: ["territory_id"]
+            isOneToOne: false
+            referencedRelation: "territories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -234,6 +572,13 @@ export type Database = {
         | "automations.manage"
         | "api.access"
       role_scope: "platform" | "organization"
+      store_channel:
+        | "modern_trade"
+        | "traditional_trade"
+        | "wholesale"
+        | "kiosk"
+      store_tier: "gold" | "silver" | "bronze" | "unclassified"
+      territory_level: "country" | "region" | "district" | "ward" | "route"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -384,6 +729,14 @@ export const Constants = {
         "api.access",
       ],
       role_scope: ["platform", "organization"],
+      store_channel: [
+        "modern_trade",
+        "traditional_trade",
+        "wholesale",
+        "kiosk",
+      ],
+      store_tier: ["gold", "silver", "bronze", "unclassified"],
+      territory_level: ["country", "region", "district", "ward", "route"],
     },
   },
 } as const
