@@ -14,10 +14,12 @@ import {
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import type { Form } from "@/features/master-data/types";
 import { FORM_STATUSES } from "@/features/master-data/types";
 import { createForm, deleteForm, updateForm, watchForms, type FormInput } from "./service";
 import { FormBuilder } from "./form-builder";
+import { FormRenderer, type Answers } from "./form-renderer";
 
 export function FormsPage() {
   const { data: ctx } = useCurrentContext();
